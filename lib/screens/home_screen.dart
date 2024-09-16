@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:ioet_u_pokedex/models/pokemon.dart';
+import 'package:ioet_u_pokedex/screens/pokemon_info_screen.dart';
 import 'package:ioet_u_pokedex/service/pokemon_service.dart';
 import 'package:ioet_u_pokedex/utils/pokemon_colors.dart';
 
@@ -69,48 +70,58 @@ class _MyHomePageState extends State<MyHomePage> {
           final pokemonTypeColor =
               PokemonColors.getColorByType(pokemon.types.first);
 
-          return Card(
-            color: pokemonTypeColor,
-            elevation: 5,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  CachedNetworkImage(
-                    imageUrl: pokemon.imageUrl,
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) =>
-                        const CircularProgressIndicator(),
-                    errorWidget: (context, url, error) =>
-                        const Icon(Icons.error),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${pokemon.name[0].toUpperCase()}${pokemon.name.substring(1).toLowerCase()}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Types: ${pokemon.types.join(', ')}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PokemonInfoScreen(pokemonId: pokemon.id),
+                ),
+              );
+            },
+            child: Card(
+              color: pokemonTypeColor,
+              elevation: 5,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    CachedNetworkImage(
+                      imageUrl: pokemon.imageUrl,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          const CircularProgressIndicator(),
+                      errorWidget: (context, url, error) =>
+                          const Icon(Icons.error),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${pokemon.name[0].toUpperCase()}${pokemon.name.substring(1).toLowerCase()}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Types: ${pokemon.types.join(', ')}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
