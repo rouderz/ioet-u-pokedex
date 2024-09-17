@@ -1,14 +1,14 @@
 import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ioet_u_pokedex/models/pokemon.dart';
 import 'package:ioet_u_pokedex/service/pokemon_service.dart';
-import 'package:ioet_u_pokedex/utils/pokemon_colors.dart';
-import 'package:ioet_u_pokedex/utils/pokemon_stats.dart';
-import 'package:path/path.dart' as path;
+import 'package:ioet_u_pokedex/widgets/pokemon_image_display.dart';
+import 'package:ioet_u_pokedex/widgets/pokemon_stats_display.dart';
+import 'package:ioet_u_pokedex/widgets/pokemon_photos_carousel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:path/path.dart' as path;
 
 class PokemonInfoScreen extends StatefulWidget {
   final int pokemonId;
@@ -23,11 +23,15 @@ class _PokemonInfoScreenState extends State<PokemonInfoScreen> {
   late Future<Pokemon> futurePokemon;
   final PokemonService _pokemonService = PokemonService();
   final ImagePicker _picker = ImagePicker();
+  Map<int, File> _pokemonImages = {};
+  File? _currentPokemonImage;
+  String? _originalPokemonImageUrl;
 
   @override
   void initState() {
     super.initState();
     futurePokemon = _pokemonService.fetchPokemonById(widget.pokemonId);
+    _loadSavedImages();
   }
 
   Future<void> _requestPermissions() async {
@@ -71,10 +75,16 @@ class _PokemonInfoScreenState extends State<PokemonInfoScreen> {
         directory.createSync(recursive: true);
       }
 
-      final String newPath = path.join(savePath, path.basename(file.path));
+      final String newPath = path.join(savePath,
+          '${widget.pokemonId}_${DateTime.now().millisecondsSinceEpoch}.png');
       final File newFile = await file.copy(newPath);
 
       if (newFile.existsSync()) {
+        setState(() {
+          int newKey = _pokemonImages.length + 1;
+          _pokemonImages[newKey] = newFile;
+          _currentPokemonImage = newFile;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Image saved to Pictures folder')),
         );
@@ -86,8 +96,39 @@ class _PokemonInfoScreenState extends State<PokemonInfoScreen> {
     }
   }
 
+  Future<void> _loadSavedImages() async {
+    final Directory? appDir = await getExternalStorageDirectory();
+    if (appDir != null) {
+      final String savePath = path.join(appDir.path, 'Pictures');
+      final Directory directory = Directory(savePath);
+
+      if (directory.existsSync()) {
+        final List<File> images = directory
+            .listSync()
+            .whereType<File>()
+            .where((file) => file.path.contains('${widget.pokemonId}_'))
+            .toList();
+
+        setState(() {
+          int index = 1;
+          for (var image in images) {
+            _pokemonImages[index] = image;
+            index++;
+          }
+          _currentPokemonImage = _pokemonImages[widget.pokemonId];
+        });
+      }
+    }
+  }
+
   void _onCameraIconPressed() {
     _requestPermissions();
+  }
+
+  void _onRefreshIconPressed() {
+    setState(() {
+      _currentPokemonImage = null;
+    });
   }
 
   @override
@@ -105,136 +146,23 @@ class _PokemonInfoScreenState extends State<PokemonInfoScreen> {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else if (snapshot.hasData) {
             final pokemon = snapshot.data!;
+            _originalPokemonImageUrl ??= pokemon.imageUrl;
             return Column(
               children: <Widget>[
-                Container(
-                  color: PokemonColors.getColorByType(pokemon.types[0]),
-                  width: double.infinity,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: <Widget>[
-                      CachedNetworkImage(
-                        imageUrl: pokemon.imageUrl,
-                        placeholder: (context, url) =>
-                            const CircularProgressIndicator(),
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.error),
-                        height: 200,
-                        width: 200,
-                      ),
-                      Positioned(
-                        top: 10,
-                        right: 10,
-                        child: GestureDetector(
-                          onTap: _onCameraIconPressed,
-                          child: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 50,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 10,
-                        left: 10,
-                        child: Text(
-                          '#${pokemon.id}',
-                          style: const TextStyle(
-                            fontSize: 40,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                PokemonImageDisplay(
+                  currentImage: _currentPokemonImage,
+                  originalImageUrl: _originalPokemonImageUrl!,
+                  onCameraPressed: _onCameraIconPressed,
+                  onRefreshPressed: _onRefreshIconPressed,
+                  pokemonId: pokemon.id,
+                  pokemonType: pokemon.types[0],
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const SizedBox(height: 10),
-                        Text(
-                          '${pokemon.name[0].toUpperCase()}${pokemon.name.substring(1).toLowerCase()}',
-                          style: const TextStyle(
-                            fontSize: 50,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        if (pokemon.weight != null)
-                          const Text(
-                            'Weight:',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        Text(
-                          '${pokemon.weight} Pounds',
-                          style: const TextStyle(
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Stats:',
-                          style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: pokemon.stats?.length ?? 0,
-                            itemBuilder: (context, index) {
-                              final stat = pokemon.stats![index];
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10.0),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Image.asset(
-                                          getStatImage(stat['stat_name']),
-                                          width: 40,
-                                          height: 40,
-                                        ),
-                                        const SizedBox(width: 25),
-                                        Text(
-                                          stat['stat_name']
-                                              .toString()
-                                              .toUpperCase(),
-                                          style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
-                                    Text(
-                                      stat['base_stat'].toString(),
-                                      style: const TextStyle(fontSize: 16),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                PokemonStatsDisplay(pokemon: pokemon),
+                PokemonPhotosCarousel(pokemonImages: _pokemonImages),
               ],
             );
-          } else {
-            return const Center(child: Text('No data available'));
           }
+          return const Center(child: Text('No data'));
         },
       ),
     );

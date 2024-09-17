@@ -6,8 +6,7 @@ import 'package:ioet_u_pokedex/service/pokemon_service.dart';
 import 'package:ioet_u_pokedex/utils/pokemon_colors.dart';
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-  final String title;
+  const MyHomePage({super.key});
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -60,7 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: const Text("Pokemon List View"),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(10),
