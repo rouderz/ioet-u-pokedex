@@ -32,6 +32,7 @@ class PokemonService {
           .toList();
 
       return Pokemon(
+        id: pokemon.id,
         name: pokemon.name,
         url: pokemon.url,
         imageUrl: pokemon.imageUrl,
@@ -39,6 +40,37 @@ class PokemonService {
       );
     } else {
       throw Exception('Failed to load Pokémon details');
+    }
+  }
+
+  Future<Pokemon> fetchPokemonById(int id) async {
+    final response =
+        await http.get(Uri.parse('https://pokeapi.co/api/v2/pokemon/$id'));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final types = (data['types'] as List)
+          .map((type) => type['type']['name'] as String)
+          .toList();
+
+      final stats = (data['stats'] as List).map((stat) {
+        return {
+          'stat_name': stat['stat']['name'],
+          'base_stat': stat['base_stat'],
+        };
+      }).toList();
+
+      return Pokemon(
+        id: data['id'],
+        name: data['name'],
+        url: 'https://pokeapi.co/api/v2/pokemon/$id',
+        imageUrl: data['sprites']['front_default'],
+        types: types,
+        stats: stats,
+        weight: data['weight']
+      );
+    } else {
+      throw Exception('Failed to load Pokémon');
     }
   }
 
