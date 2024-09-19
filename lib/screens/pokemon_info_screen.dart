@@ -1,9 +1,14 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:ioet_u_pokedex/models/pokemon.dart';
 import 'package:ioet_u_pokedex/service/pokemon_service.dart';
 import 'package:ioet_u_pokedex/utils/pokemon_colors.dart';
 import 'package:ioet_u_pokedex/utils/pokemon_stats.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class PokemonInfoScreen extends StatefulWidget {
   final int pokemonId;
@@ -17,6 +22,7 @@ class PokemonInfoScreen extends StatefulWidget {
 class _PokemonInfoScreenState extends State<PokemonInfoScreen> {
   late Future<Pokemon> futurePokemon;
   final PokemonService _pokemonService = PokemonService();
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -24,8 +30,64 @@ class _PokemonInfoScreenState extends State<PokemonInfoScreen> {
     futurePokemon = _pokemonService.fetchPokemonById(widget.pokemonId);
   }
 
+  Future<void> _requestPermissions() async {
+    var cameraStatus = await Permission.camera.status;
+    var storageStatus = await Permission.storage.status;
+
+    if (!cameraStatus.isGranted) {
+      cameraStatus = await Permission.camera.request();
+    }
+
+    if (!storageStatus.isGranted) {
+      storageStatus = await Permission.storage.request();
+    }
+
+    if (cameraStatus.isGranted) {
+      _takePicture();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Camera or Storage permission denied")),
+      );
+    }
+  }
+
+  Future<void> _takePicture() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.camera);
+
+    if (pickedFile != null) {
+      final file = File(pickedFile.path);
+
+      final Directory? appDir = await getExternalStorageDirectory();
+      if (appDir == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to access storage directory')),
+        );
+        return;
+      }
+      final String savePath = path.join(appDir.path, 'Pictures');
+      final Directory directory = Directory(savePath);
+
+      if (!directory.existsSync()) {
+        directory.createSync(recursive: true);
+      }
+
+      final String newPath = path.join(savePath, path.basename(file.path));
+      final File newFile = await file.copy(newPath);
+
+      if (newFile.existsSync()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image saved to Pictures folder')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error saving image')),
+        );
+      }
+    }
+  }
+
   void _onCameraIconPressed() {
-    print('Camera icon pressed');
+    _requestPermissions();
   }
 
   @override
