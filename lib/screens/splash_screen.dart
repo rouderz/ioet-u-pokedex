@@ -20,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-          builder: (context) => const MyHomePage(title: "Pokemon List View")),
+          builder: (context) => const MyHomePage()),
     );
   }
 

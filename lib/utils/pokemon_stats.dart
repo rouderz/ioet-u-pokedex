@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 String getStatImage(String statName) {
   switch (statName.toLowerCase()) {
     case 'hp':
